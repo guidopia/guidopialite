@@ -35,19 +35,16 @@ const signupLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Temporary admin creation endpoint (remove after use)
-router.get('/create-admin',
-  (req, res, next) => {
-    // Only allow in development or with special header
-    if (process.env.NODE_ENV === 'production' && req.query.secret !== 'guidopia-admin-setup-2024') {
+// Temporary admin creation endpoint (remove after use) - NO AUTH REQUIRED
+router.get('/create-admin', async (req, res) => {
+  try {
+    // Simple secret check for basic security
+    if (req.query.secret !== 'guidopia-admin-setup-2024') {
       return res.status(403).json({
         success: false,
-        message: 'Admin creation not allowed in production'
+        message: 'Invalid secret provided'
       });
     }
-    next();
-  },
-  async (req, res) => {
     try {
       const adminData = {
         fullName: 'Guidopia Admin',
