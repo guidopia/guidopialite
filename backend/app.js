@@ -24,10 +24,11 @@ const app = express();
 app.set('trust proxy', 1);
 console.log('✅ Trust proxy set to:', app.get('trust proxy'));
 
-// Connect to MongoDB and start server
-(async () => {
-  await connectDB();
-})();
+// Connect to MongoDB (don't block app startup)
+connectDB().catch(err => {
+  console.error('Failed to connect to MongoDB:', err);
+  console.warn('⚠️  App starting without database connection');
+});
 
 // Define CORS options - Simplified for Vercel compatibility
 const corsOptions = {
@@ -124,12 +125,18 @@ app.get('/favicon.ico', (req, res) => res.status(204).end());
 
 // ========== DEBUGGING ENDPOINTS ==========
 app.get('/health', (req, res) => {
+  const { isDBConnected } = require('./config/database');
+
   res.status(200).json({
     success: true,
     message: 'Server is running',
     timestamp: new Date().toISOString(),
     environment: config.NODE_ENV || 'development',
     trustProxy: app.get('trust proxy'),
+    database: {
+      connected: isDBConnected(),
+      readyState: require('mongoose').connection.readyState
+    },
     ip: req.ip,
     ips: req.ips
   });
@@ -163,6 +170,30 @@ app.get('/api/test-cors', (req, res) => {
       'host': req.get('Host')
     },
     allowedOrigins: allowedOrigins
+  });
+});
+
+app.get('/api/debug', (req, res) => {
+  const { isDBConnected } = require('./config/database');
+
+  res.json({
+    timestamp: new Date().toISOString(),
+    environment: {
+      NODE_ENV: process.env.NODE_ENV,
+      hasMongoURI: !!process.env.MONGODB_URI,
+      mongoURI: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 50) + '...' : null,
+      hasJWT: !!process.env.JWT_SECRET,
+      hasOpenAI: !!process.env.OPENAI_API_KEY
+    },
+    database: {
+      connected: isDBConnected(),
+      readyState: require('mongoose').connection.readyState,
+      name: require('mongoose').connection.name || null
+    },
+    cors: {
+      origin: req.get('Origin'),
+      allowed: true
+    }
   });
 });
 
