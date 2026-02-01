@@ -31,18 +31,33 @@ console.log('✅ Trust proxy set to:', app.get('trust proxy'));
 
 // Define CORS options in a single object
 const corsOptions = {
-  origin: [
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'https://www.askcareer.in',
-    'https://askcareer.in',
-    'https://guidopia.com',
-    'https://www.guidopia.com'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://www.askcareer.in',
+      'https://askcareer.in',
+      'https://guidopia.com',
+      'https://www.guidopia.com',
+      'https://guidopialite-backend.vercel.app'
+    ];
+
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 CORS blocked origin: ${origin}`);
+      callback(new Error(`CORS policy violation: Origin ${origin} not allowed`), false);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 };
 
 // Use CORS for all requests
@@ -111,16 +126,33 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/api/test-cors', (req, res) => {
+  const origin = req.get('Origin');
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://www.askcareer.in',
+    'https://askcareer.in',
+    'https://guidopia.com',
+    'https://www.guidopia.com',
+    'https://guidopialite-backend.vercel.app'
+  ];
+
+  const isAllowed = !origin || allowedOrigins.includes(origin);
+
   res.json({
     success: true,
-    message: 'CORS is working perfectly!',
-    origin: req.get('Origin'),
+    message: isAllowed ? 'CORS is working perfectly!' : `CORS check: Origin ${origin} would be blocked`,
+    origin: origin,
+    allowed: isAllowed,
     ip: req.ip,
     headers: {
       origin: req.get('Origin'),
       'x-forwarded-for': req.get('X-Forwarded-For'),
-      'user-agent': req.get('User-Agent')
-    }
+      'user-agent': req.get('User-Agent'),
+      'host': req.get('Host')
+    },
+    allowedOrigins: allowedOrigins
   });
 });
 
