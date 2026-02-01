@@ -36,6 +36,7 @@ const corsOptions = {
     'http://localhost:5173',
     'http://localhost:5174',
     'https://www.askcareer.in',
+    'https://askcareer.in',
     'https://guidopia.com',
     'https://www.guidopia.com'
   ],
