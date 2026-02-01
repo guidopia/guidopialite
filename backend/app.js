@@ -193,7 +193,8 @@ app.get('/api/debug', (req, res) => {
       name: require('mongoose').connection.name || null
     },
     openai: {
-      clientInitialized: !!require('./routes/openai').openai,
+      keyConfigured: !!process.env.OPENAI_API_KEY,
+      keyFormat: process.env.OPENAI_API_KEY ? (process.env.OPENAI_API_KEY.startsWith('sk-') ? 'valid' : 'invalid') : 'missing',
       keyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0
     },
     cors: {
