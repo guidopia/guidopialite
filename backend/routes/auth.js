@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const User = require('../models/User');
 const authController = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 const { 
@@ -45,49 +46,48 @@ router.get('/create-admin', async (req, res) => {
         message: 'Invalid secret provided'
       });
     }
-    try {
-      const adminData = {
-        fullName: 'Guidopia Admin',
-        email: 'guidopiacareer@gmail.com',
-        password: 'Admin@Guidopia2026!',
-        phone: '+919876543210',
-        class: '12th',
-        role: 'admin',
-        isEmailVerified: true,
-        isActive: true
-      };
 
-      // Check if admin already exists
-      const existingAdmin = await User.findOne({ email: adminData.email });
-      if (existingAdmin) {
-        return res.status(400).json({
-          success: false,
-          message: 'Admin user already exists',
-          email: existingAdmin.email
-        });
-      }
+    const adminData = {
+      fullName: 'Guidopia Admin',
+      email: 'guidopiacareer@gmail.com',
+      password: 'Admin@Guidopia2026!',
+      phone: '+919876543210',
+      class: '12th',
+      role: 'admin',
+      isEmailVerified: true,
+      isActive: true
+    };
 
-      // Create admin user
-      const admin = new User(adminData);
-      await admin.save();
-
-      res.status(201).json({
-        success: true,
-        message: 'Admin user created successfully',
-        email: admin.email,
-        password: 'Admin@Guidopia2026!',
-        note: 'Remove this endpoint after successful creation'
-      });
-
-    } catch (error) {
-      console.error('Admin creation error:', error);
-      res.status(500).json({
+    // Check if admin already exists
+    const existingAdmin = await User.findOne({ email: adminData.email });
+    if (existingAdmin) {
+      return res.status(400).json({
         success: false,
-        message: 'Failed to create admin user'
+        message: 'Admin user already exists',
+        email: existingAdmin.email
       });
     }
+
+    // Create admin user
+    const admin = new User(adminData);
+    await admin.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Admin user created successfully',
+      email: admin.email,
+      password: 'Admin@Guidopia2026!',
+      note: 'Remove this endpoint after successful creation'
+    });
+
+  } catch (error) {
+    console.error('Admin creation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create admin user'
+    });
   }
-);
+});
 
 // Public routes
 router.post('/signup',
