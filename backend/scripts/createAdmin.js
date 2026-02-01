@@ -13,7 +13,7 @@ const createAdmin = async () => {
     const adminData = {
       fullName: 'Guidopia Admin',
       email: 'guidopiacareer@gmail.com',
-      password: 'Admin@Guidopia2024!',
+      password: 'Admin@Guidopia2026!',
       phone: '+919876543210',
       class: '12th', // Required field, using 12th as default
       role: 'admin',
@@ -26,7 +26,7 @@ const createAdmin = async () => {
     if (existingAdmin) {
       console.log('⚠️  Admin user already exists:', existingAdmin.email);
       console.log('📧 Email:', existingAdmin.email);
-      console.log('🔑 Password: Admin@Guidopia2024!');
+      console.log('🔑 Password: Admin@Guidopia2026!');
       process.exit(0);
     }
 
@@ -37,7 +37,7 @@ const createAdmin = async () => {
 
     console.log('✅ Admin user created successfully!');
     console.log('📧 Email:', admin.email);
-    console.log('🔑 Password: Admin@Guidopia2024!');
+    console.log('🔑 Password: Admin@Guidopia2026!');
     console.log('👑 Role: admin');
     console.log('📱 Phone: +919876543210');
 

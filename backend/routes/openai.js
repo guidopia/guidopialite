@@ -96,8 +96,8 @@ const initializeOpenAI = () => {
 
   try {
     openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+  apiKey: process.env.OPENAI_API_KEY
+});
     console.log('✅ OpenAI client initialized successfully');
     return openai;
   } catch (error) {
@@ -148,11 +148,11 @@ router.post('/chat', validateOpenAIRequest, async (req, res) => {
       });
     }
 
-    const {
-      messages,
-      model = 'gpt-4o-mini',
-      temperature = 0.7,
-      max_tokens = 4000
+    const { 
+      messages, 
+      model = 'gpt-4o-mini', 
+      temperature = 0.7, 
+      max_tokens = 4000 
     } = req.body;
 
     // Validate API key and client
@@ -589,7 +589,7 @@ router.get('/health', async (req, res) => {
     };
 
     console.error('❌ OpenAI health check failed:', sanitizedError);
-
+    
     res.status(500).json({
       success: false,
       message: 'OpenAI service health check failed',

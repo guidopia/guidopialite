@@ -11,16 +11,16 @@ const connectDB = async () => {
     }
 
     console.log('🔌 Connecting to MongoDB...');
-
+    
     await mongoose.connect(config.MONGODB_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
-
+    
     isConnected = true;
     console.log('✅ MongoDB Connected');
-
+    
   } catch (error) {
     console.error('❌ Database connection error:', error);
     console.warn('⚠️  App will continue without database connection');

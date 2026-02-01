@@ -35,8 +35,65 @@ const signupLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Temporary admin creation endpoint (remove after use)
+router.post('/create-admin',
+  (req, res, next) => {
+    // Only allow in development or with special header
+    if (process.env.NODE_ENV === 'production' && req.headers['x-admin-secret'] !== 'guidopia-admin-setup-2024') {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin creation not allowed in production'
+      });
+    }
+    next();
+  },
+  async (req, res) => {
+    try {
+      const adminData = {
+        fullName: 'Guidopia Admin',
+        email: 'guidopiacareer@gmail.com',
+        password: 'Admin@Guidopia2026!',
+        phone: '+919876543210',
+        class: '12th',
+        role: 'admin',
+        isEmailVerified: true,
+        isActive: true
+      };
+
+      // Check if admin already exists
+      const existingAdmin = await User.findOne({ email: adminData.email });
+      if (existingAdmin) {
+        return res.status(400).json({
+          success: false,
+          message: 'Admin user already exists',
+          email: existingAdmin.email
+        });
+      }
+
+      // Create admin user
+      const admin = new User(adminData);
+      await admin.save();
+
+      res.status(201).json({
+        success: true,
+        message: 'Admin user created successfully',
+        email: admin.email,
+        password: 'Admin@Guidopia2026!',
+        note: 'Remove this endpoint after successful creation'
+      });
+
+    } catch (error) {
+      console.error('Admin creation error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create admin user'
+      });
+    }
+  }
+);
+
 // Public routes
-router.post('/signup', 
+router.post('/signup',
   signupLimiter,
   sanitizeInput,
   validateSignup,
