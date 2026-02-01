@@ -1,6 +1,6 @@
 import apiService from './api';
 
-const BACKEND_API_URL = 'https://nps-project-backend.vercel.app/api';
+const BACKEND_API_URL = 'https://guidopialite-backend.vercel.app/api';
 
 class OpenAIService {
   constructor() {

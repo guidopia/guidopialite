@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://nps-project-backend.vercel.app/api';
+const API_BASE_URL = 'https://guidopialite-backend.vercel.app/api';
 
 class ApiService {
   constructor() {

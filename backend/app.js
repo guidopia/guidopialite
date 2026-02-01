@@ -35,8 +35,7 @@ const corsOptions = {
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',
-    'https://npsproject.vercel.app',
-    'https://www.npstalentexplorer.in',
+    'https://www.askcareer.in',
     'https://guidopia.com',
     'https://www.guidopia.com'
   ],
