@@ -183,12 +183,18 @@ app.get('/api/debug', (req, res) => {
       hasMongoURI: !!process.env.MONGODB_URI,
       mongoURI: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 50) + '...' : null,
       hasJWT: !!process.env.JWT_SECRET,
-      hasOpenAI: !!process.env.OPENAI_API_KEY
+      hasOpenAI: !!process.env.OPENAI_API_KEY,
+      openAIKeyFormat: process.env.OPENAI_API_KEY ?
+        (process.env.OPENAI_API_KEY.startsWith('sk-') ? 'valid' : 'invalid') : 'missing'
     },
     database: {
       connected: isDBConnected(),
       readyState: require('mongoose').connection.readyState,
       name: require('mongoose').connection.name || null
+    },
+    openai: {
+      clientInitialized: !!require('./routes/openai').openai,
+      keyLength: process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0
     },
     cors: {
       origin: req.get('Origin'),

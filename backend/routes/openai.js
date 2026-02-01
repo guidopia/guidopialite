@@ -20,6 +20,10 @@ async function validateApiKeyHealth() {
       throw new Error('OpenAI API key not configured');
     }
 
+    if (!openai) {
+      throw new Error('OpenAI client not initialized');
+    }
+
     // Test with a minimal request (very low cost)
     const testCompletion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
@@ -45,6 +49,7 @@ async function validateApiKeyHealth() {
 
     console.error('❌ API Key Health Check Failed:', {
       error: error.message,
+      status: error.status,
       consecutiveFailures: apiKeyHealthStatus.consecutiveFailures,
       timestamp: new Date().toISOString()
     });
@@ -75,10 +80,34 @@ const apiKeyHealthCheck = async (req, res, next) => {
   next();
 };
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Initialize OpenAI client with validation
+let openai = null;
+
+const initializeOpenAI = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    console.error('❌ OPENAI_API_KEY environment variable not set');
+    return null;
+  }
+
+  if (!process.env.OPENAI_API_KEY.startsWith('sk-')) {
+    console.error('❌ OPENAI_API_KEY does not start with "sk-"');
+    return null;
+  }
+
+  try {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+    console.log('✅ OpenAI client initialized successfully');
+    return openai;
+  } catch (error) {
+    console.error('❌ Failed to initialize OpenAI client:', error.message);
+    return null;
+  }
+};
+
+// Initialize on startup
+initializeOpenAI();
 
 // Rate limiting for OpenAI endpoints
 const openaiRateLimit = rateLimit({
@@ -119,19 +148,19 @@ router.post('/chat', validateOpenAIRequest, async (req, res) => {
       });
     }
 
-    const { 
-      messages, 
-      model = 'gpt-4o-mini', 
-      temperature = 0.7, 
-      max_tokens = 4000 
+    const {
+      messages,
+      model = 'gpt-4o-mini',
+      temperature = 0.7,
+      max_tokens = 4000
     } = req.body;
 
-    // Validate API key
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('❌ OpenAI API key not configured');
+    // Validate API key and client
+    if (!openai) {
+      console.error('❌ OpenAI client not initialized');
       return res.status(500).json({
         error: 'Configuration error',
-        message: 'OpenAI API key not configured on server'
+        message: 'OpenAI service not properly configured'
       });
     }
 
@@ -486,6 +515,22 @@ router.post('/learning-paths', validateOpenAIRequest, async (req, res) => {
   }
 });
 
+// Basic API key configuration check
+router.get('/key-status', (req, res) => {
+  const hasKey = !!process.env.OPENAI_API_KEY;
+  const keyFormat = hasKey ? (process.env.OPENAI_API_KEY.startsWith('sk-') ? 'valid' : 'invalid') : 'missing';
+  const keyLength = hasKey ? process.env.OPENAI_API_KEY.length : 0;
+
+  res.json({
+    success: true,
+    configured: hasKey,
+    format: keyFormat,
+    length: keyLength,
+    clientInitialized: !!openai,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check for OpenAI service
 router.get('/health', async (req, res) => {
   try {
@@ -493,6 +538,16 @@ router.get('/health', async (req, res) => {
       return res.status(500).json({
         success: false,
         message: 'OpenAI API key not configured',
+        service: 'OpenAI',
+        status: 'unavailable',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!openai) {
+      return res.status(500).json({
+        success: false,
+        message: 'OpenAI client not initialized',
         service: 'OpenAI',
         status: 'unavailable',
         timestamp: new Date().toISOString()
@@ -534,7 +589,7 @@ router.get('/health', async (req, res) => {
     };
 
     console.error('❌ OpenAI health check failed:', sanitizedError);
-    
+
     res.status(500).json({
       success: false,
       message: 'OpenAI service health check failed',
@@ -548,3 +603,4 @@ router.get('/health', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.openai = openai;
