@@ -60,12 +60,27 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "https://api.openai.com"], // Allow backend to connect to OpenAI
+      frameSrc: ["'none'"], // Prevent iframe embedding
+      objectSrc: ["'none'"], // Prevent object/embed tags
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [], // Redirect HTTP to HTTPS in production
     },
   },
   crossOriginEmbedderPolicy: false,
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true, // Prevent MIME type sniffing
+  xssFilter: true, // Enable XSS filtering
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
 }));
 
 // View engine setup

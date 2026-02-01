@@ -52,22 +52,59 @@ const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET', 'JWT_REFRESH_SECRET', 'OPE
 
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
-if (missingEnvVars.length > 0 && config.NODE_ENV === 'production') {
-  console.error('Missing required environment variables:', missingEnvVars);
-  process.exit(1);
+if (missingEnvVars.length > 0) {
+  if (config.NODE_ENV === 'production') {
+    console.error('❌ CRITICAL: Missing required environment variables:', missingEnvVars);
+    console.error('🚨 Application cannot start without required environment variables in production');
+    process.exit(1);
+  } else {
+    console.warn('⚠️  WARNING: Missing environment variables (development mode):', missingEnvVars);
+    console.warn('📝 Some features may not work properly');
+  }
+}
+
+// Validate OpenAI API key format (should start with 'sk-' for OpenAI)
+if (process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.startsWith('sk-')) {
+  console.error('❌ CRITICAL: Invalid OpenAI API key format. Key should start with "sk-"');
+  if (config.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+}
+
+// Validate OpenAI API key length (OpenAI keys are typically 51 characters for sk- keys)
+if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.length < 50) {
+  console.warn('⚠️  WARNING: OpenAI API key seems unusually short. Please verify it is correct.');
 }
 
 // Security warnings
 if (config.NODE_ENV === 'production') {
+  const securityWarnings = [];
+
   if (config.JWT_SECRET === 'guidopia-super-secret-jwt-key-2024-development') {
-    console.warn('⚠️  WARNING: Using default JWT secret in production!');
+    securityWarnings.push('Using default JWT secret in production');
   }
   if (config.JWT_REFRESH_SECRET === 'guidopia-super-secret-refresh-key-2024-development') {
-    console.warn('⚠️  WARNING: Using default refresh secret in production!');
+    securityWarnings.push('Using default refresh secret in production');
   }
   if (config.SESSION_SECRET === 'guidopia-super-secret-session-key-2024-development') {
-    console.warn('⚠️  WARNING: Using default session secret in production!');
+    securityWarnings.push('Using default session secret in production');
   }
+
+  if (securityWarnings.length > 0) {
+    console.error('❌ SECURITY ALERT: Production deployment with insecure defaults:');
+    securityWarnings.forEach(warning => console.error(`   - ${warning}`));
+    console.error('🔒 Please set secure environment variables before deploying to production');
+    process.exit(1);
+  }
+}
+
+// Security audit logging (only in development)
+if (config.NODE_ENV !== 'production') {
+  console.log('🔒 Security Configuration:');
+  console.log(`   - OpenAI API Key: ${process.env.OPENAI_API_KEY ? '✅ Configured' : '❌ Missing'}`);
+  console.log(`   - JWT Secret: ${config.JWT_SECRET ? '✅ Configured' : '❌ Missing'}`);
+  console.log(`   - Database URI: ${config.MONGODB_URI ? '✅ Configured' : '❌ Missing'}`);
+  console.log(`   - Environment: ${config.NODE_ENV || 'development'}`);
 }
 
 module.exports = config;

@@ -2,13 +2,44 @@ const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
 
-  // Log error for debugging
+  // Sanitize error message and stack trace to prevent information leakage
+  const sanitizeError = (errorObj) => {
+    if (!errorObj) return errorObj;
+
+    const sanitized = { ...errorObj };
+
+    // Remove sensitive information from message
+    if (sanitized.message) {
+      sanitized.message = sanitized.message
+        .replace(/sk-[a-zA-Z0-9]{48}/g, '[REDACTED]') // OpenAI API keys
+        .replace(/mongodb\+srv:\/\/[^:]+:[^@]+@/g, 'mongodb+srv://[REDACTED]:[REDACTED]@') // MongoDB credentials
+        .replace(/Bearer\s+[a-zA-Z0-9._-]+/g, 'Bearer [REDACTED]') // JWT tokens
+        .replace(/password[^=]*=([^&\s]+)/g, 'password=[REDACTED]') // Passwords in URLs
+        .replace(/token[^=]*=([^&\s]+)/g, 'token=[REDACTED]'); // Tokens in URLs
+    }
+
+    // Sanitize stack trace in production
+    if (sanitized.stack && process.env.NODE_ENV === 'production') {
+      // Remove file paths and sensitive information from stack trace
+      sanitized.stack = sanitized.stack
+        .replace(/\/home\/[^/]+\/[^/]+\/[^/]+\//g, '/[REDACTED]/')
+        .replace(/C:\\Users\\[^\\]+\\[^\\]+\\[^\\]+\\/g, 'C:\\[REDACTED]\\')
+        .replace(/sk-[a-zA-Z0-9]{48}/g, '[REDACTED]');
+    }
+
+    return sanitized;
+  };
+
+  const sanitizedError = sanitizeError(err);
+
+  // Log sanitized error for debugging
   console.error('Error:', {
-    message: err.message,
-    stack: err.stack,
+    message: sanitizedError.message,
+    stack: process.env.NODE_ENV === 'development' ? sanitizedError.stack : '[REDACTED IN PRODUCTION]',
     url: req.url,
     method: req.method,
     ip: req.ip,
+    userAgent: req.get('User-Agent')?.substring(0, 100), // Truncate user agent
     timestamp: new Date().toISOString()
   });
 

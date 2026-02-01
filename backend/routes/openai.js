@@ -5,6 +5,76 @@ const rateLimit = require('express-rate-limit');
 
 const router = express.Router();
 
+// API Key Health Monitoring
+let apiKeyHealthStatus = {
+  lastChecked: null,
+  isValid: null,
+  error: null,
+  consecutiveFailures: 0
+};
+
+// Function to validate API key health
+async function validateApiKeyHealth() {
+  try {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    // Test with a minimal request (very low cost)
+    const testCompletion = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: 'test' }],
+      max_tokens: 1
+    });
+
+    apiKeyHealthStatus = {
+      lastChecked: new Date(),
+      isValid: true,
+      error: null,
+      consecutiveFailures: 0
+    };
+
+    return true;
+  } catch (error) {
+    apiKeyHealthStatus = {
+      lastChecked: new Date(),
+      isValid: false,
+      error: error.message,
+      consecutiveFailures: apiKeyHealthStatus.consecutiveFailures + 1
+    };
+
+    console.error('❌ API Key Health Check Failed:', {
+      error: error.message,
+      consecutiveFailures: apiKeyHealthStatus.consecutiveFailures,
+      timestamp: new Date().toISOString()
+    });
+
+    return false;
+  }
+}
+
+// Middleware to check API key health before processing requests
+const apiKeyHealthCheck = async (req, res, next) => {
+  // Check health every 5 minutes or if we have consecutive failures
+  const shouldCheckHealth = !apiKeyHealthStatus.lastChecked ||
+    (Date.now() - apiKeyHealthStatus.lastChecked.getTime()) > (5 * 60 * 1000) ||
+    apiKeyHealthStatus.consecutiveFailures > 0;
+
+  if (shouldCheckHealth) {
+    await validateApiKeyHealth();
+  }
+
+  // If API key is invalid and we have too many failures, return error
+  if (!apiKeyHealthStatus.isValid && apiKeyHealthStatus.consecutiveFailures >= 3) {
+    return res.status(503).json({
+      error: 'Service temporarily unavailable',
+      message: 'AI service is currently experiencing issues. Please try again later.'
+    });
+  }
+
+  next();
+};
+
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -22,8 +92,9 @@ const openaiRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
-// Apply rate limiting to all OpenAI routes
+// Apply rate limiting and API key health check to all OpenAI routes
 router.use(openaiRateLimit);
+router.use(apiKeyHealthCheck);
 
 // Validation middleware for OpenAI requests
 const validateOpenAIRequest = [
@@ -94,7 +165,15 @@ router.post('/chat', validateOpenAIRequest, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ OpenAI API Error:', error);
+    // Sanitize error logging to prevent API key exposure
+    const sanitizedError = {
+      status: error.status,
+      code: error.code,
+      type: error.type,
+      message: error.message ? error.message.replace(/sk-[a-zA-Z0-9]{48}/g, '[REDACTED]') : 'Unknown error'
+    };
+
+    console.error('❌ OpenAI API Error:', sanitizedError);
 
     // Handle specific OpenAI errors
     if (error.status === 429) {
@@ -107,14 +186,21 @@ router.post('/chat', validateOpenAIRequest, async (req, res) => {
     if (error.status === 401) {
       return res.status(401).json({
         error: 'Authentication failed',
-        message: 'Invalid OpenAI API key configuration.'
+        message: 'OpenAI API authentication failed. Please contact support.'
       });
     }
 
     if (error.status === 400) {
       return res.status(400).json({
         error: 'Bad request',
-        message: error.message || 'Invalid request to OpenAI API'
+        message: 'Invalid request parameters. Please check your input.'
+      });
+    }
+
+    if (error.status === 403) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access to OpenAI API is forbidden. Please contact support.'
       });
     }
 
@@ -125,7 +211,7 @@ router.post('/chat', validateOpenAIRequest, async (req, res) => {
       });
     }
 
-    // Generic error
+    // Generic error - never expose internal details
     res.status(500).json({
       error: 'Internal server error',
       message: 'Failed to generate AI response. Please try again.'
@@ -184,7 +270,15 @@ router.post('/school-report', validateOpenAIRequest, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ School report generation error:', error);
+    // Sanitize error logging to prevent API key exposure
+    const sanitizedError = {
+      status: error.status,
+      code: error.code,
+      type: error.type,
+      message: error.message ? error.message.replace(/sk-[a-zA-Z0-9]{48}/g, '[REDACTED]') : 'Unknown error'
+    };
+
+    console.error('❌ School report generation error:', sanitizedError);
 
     if (error.status === 429) {
       return res.status(429).json({
@@ -196,7 +290,14 @@ router.post('/school-report', validateOpenAIRequest, async (req, res) => {
     if (error.status === 401) {
       return res.status(401).json({
         error: 'Authentication failed',
-        message: 'Invalid OpenAI API key configuration.'
+        message: 'OpenAI API authentication failed. Please contact support.'
+      });
+    }
+
+    if (error.status === 403) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access to OpenAI API is forbidden. Please contact support.'
       });
     }
 
@@ -258,12 +359,34 @@ router.post('/market-insights', validateOpenAIRequest, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Market insights generation error:', error);
+    // Sanitize error logging to prevent API key exposure
+    const sanitizedError = {
+      status: error.status,
+      code: error.code,
+      type: error.type,
+      message: error.message ? error.message.replace(/sk-[a-zA-Z0-9]{48}/g, '[REDACTED]') : 'Unknown error'
+    };
+
+    console.error('❌ Market insights generation error:', sanitizedError);
 
     if (error.status === 429) {
       return res.status(429).json({
         error: 'Rate limit exceeded',
         message: 'Too many insights requests. Please try again later.'
+      });
+    }
+
+    if (error.status === 401) {
+      return res.status(401).json({
+        error: 'Authentication failed',
+        message: 'OpenAI API authentication failed. Please contact support.'
+      });
+    }
+
+    if (error.status === 403) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access to OpenAI API is forbidden. Please contact support.'
       });
     }
 
@@ -325,12 +448,34 @@ router.post('/learning-paths', validateOpenAIRequest, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Learning paths generation error:', error);
+    // Sanitize error logging to prevent API key exposure
+    const sanitizedError = {
+      status: error.status,
+      code: error.code,
+      type: error.type,
+      message: error.message ? error.message.replace(/sk-[a-zA-Z0-9]{48}/g, '[REDACTED]') : 'Unknown error'
+    };
+
+    console.error('❌ Learning paths generation error:', sanitizedError);
 
     if (error.status === 429) {
       return res.status(429).json({
         error: 'Rate limit exceeded',
         message: 'Too many learning path requests. Please try again later.'
+      });
+    }
+
+    if (error.status === 401) {
+      return res.status(401).json({
+        error: 'Authentication failed',
+        message: 'OpenAI API authentication failed. Please contact support.'
+      });
+    }
+
+    if (error.status === 403) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access to OpenAI API is forbidden. Please contact support.'
       });
     }
 
@@ -349,35 +494,54 @@ router.get('/health', async (req, res) => {
         success: false,
         message: 'OpenAI API key not configured',
         service: 'OpenAI',
-        status: 'unavailable'
+        status: 'unavailable',
+        timestamp: new Date().toISOString()
       });
     }
 
-    // Test with a minimal request
-    const testCompletion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: 'Hello' }],
-      max_tokens: 5
-    });
+    // Force a fresh health check
+    const isHealthy = await validateApiKeyHealth();
+
+    if (!isHealthy) {
+      return res.status(500).json({
+        success: false,
+        message: 'OpenAI API key validation failed',
+        service: 'OpenAI',
+        status: 'unavailable',
+        lastChecked: apiKeyHealthStatus.lastChecked,
+        consecutiveFailures: apiKeyHealthStatus.consecutiveFailures,
+        timestamp: new Date().toISOString()
+      });
+    }
 
     res.status(200).json({
       success: true,
       message: 'OpenAI service is operational',
       service: 'OpenAI',
       status: 'available',
-      model: testCompletion.model,
+      lastChecked: apiKeyHealthStatus.lastChecked,
+      consecutiveFailures: apiKeyHealthStatus.consecutiveFailures,
       timestamp: new Date().toISOString()
     });
 
   } catch (error) {
-    console.error('❌ OpenAI health check failed:', error);
-    
+    // Sanitize error logging to prevent API key exposure
+    const sanitizedError = {
+      status: error.status,
+      code: error.code,
+      type: error.type,
+      message: error.message ? error.message.replace(/sk-[a-zA-Z0-9]{48}/g, '[REDACTED]') : 'Unknown error'
+    };
+
+    console.error('❌ OpenAI health check failed:', sanitizedError);
+
     res.status(500).json({
       success: false,
-      message: 'OpenAI service is unavailable',
+      message: 'OpenAI service health check failed',
       service: 'OpenAI',
       status: 'unavailable',
-      error: error.message,
+      lastChecked: apiKeyHealthStatus.lastChecked,
+      consecutiveFailures: apiKeyHealthStatus.consecutiveFailures,
       timestamp: new Date().toISOString()
     });
   }
