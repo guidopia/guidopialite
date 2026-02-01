@@ -36,10 +36,10 @@ const signupLimiter = rateLimit({
 });
 
 // Temporary admin creation endpoint (remove after use)
-router.post('/create-admin',
+router.get('/create-admin',
   (req, res, next) => {
     // Only allow in development or with special header
-    if (process.env.NODE_ENV === 'production' && req.headers['x-admin-secret'] !== 'guidopia-admin-setup-2024') {
+    if (process.env.NODE_ENV === 'production' && req.query.secret !== 'guidopia-admin-setup-2024') {
       return res.status(403).json({
         success: false,
         message: 'Admin creation not allowed in production'
