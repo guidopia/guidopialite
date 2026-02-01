@@ -534,7 +534,7 @@ router.get('/health', async (req, res) => {
     };
 
     console.error('❌ OpenAI health check failed:', sanitizedError);
-
+    
     res.status(500).json({
       success: false,
       message: 'OpenAI service health check failed',

@@ -56,7 +56,7 @@ if (missingEnvVars.length > 0) {
   if (config.NODE_ENV === 'production') {
     console.error('❌ CRITICAL: Missing required environment variables:', missingEnvVars);
     console.error('🚨 Application cannot start without required environment variables in production');
-    process.exit(1);
+  process.exit(1);
   } else {
     console.warn('⚠️  WARNING: Missing environment variables (development mode):', missingEnvVars);
     console.warn('📝 Some features may not work properly');
