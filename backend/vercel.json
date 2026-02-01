@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "bin/www",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 30
+      }
     }
   ],
   "routes": [
@@ -11,10 +14,5 @@
       "src": "/(.*)",
       "dest": "bin/www"
     }
-  ],
-  "functions": {
-    "bin/www": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
