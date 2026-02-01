@@ -29,42 +29,52 @@ console.log('✅ Trust proxy set to:', app.get('trust proxy'));
   await connectDB();
 })();
 
-// Define CORS options in a single object
+// Define CORS options - Simplified for Vercel compatibility
 const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'https://www.askcareer.in',
-      'https://askcareer.in',
-      'https://guidopia.com',
-      'https://www.guidopia.com',
-      'https://guidopialite-backend.vercel.app'
-    ];
-
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.warn(`🚫 CORS blocked origin: ${origin}`);
-      callback(new Error(`CORS policy violation: Origin ${origin} not allowed`), false);
-    }
-  },
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://www.askcareer.in',
+    'https://askcareer.in',
+    'https://guidopia.com',
+    'https://www.guidopia.com',
+    'https://guidopialite-backend.vercel.app'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+  optionsSuccessStatus: 200
 };
 
 // Use CORS for all requests
 app.use(cors(corsOptions));
 
-// Explicitly handle preflight requests for all routes
-app.options('*', cors(corsOptions));
+// Handle preflight OPTIONS requests for all routes
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://www.askcareer.in',
+    'https://askcareer.in',
+    'https://guidopia.com',
+    'https://www.guidopia.com',
+    'https://guidopialite-backend.vercel.app'
+  ];
+
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.sendStatus(200);
+  } else {
+    console.warn(`🚫 CORS preflight blocked origin: ${origin}`);
+    res.sendStatus(403);
+  }
+});
 
 // ========== KEY FIX #3: RATE LIMITING COMPLETELY DISABLED ==========
 console.log('⚠️ Rate limiting is DISABLED for debugging');
