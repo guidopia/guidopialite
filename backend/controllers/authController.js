@@ -49,9 +49,28 @@ const signup = async (req, res) => {
   try {
     const { fullName, class: userClass, phone, email, password } = req.body;
 
+    console.log('🔐 Signup attempt:', {
+      email,
+      fullName,
+      phone,
+      userClass,
+      hasPassword: !!password
+    });
+
+    // Check database connection first
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ Database not connected during signup, readyState:', mongoose.connection.readyState);
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection error. Please try again later.',
+        readyState: mongoose.connection.readyState
+      });
+    }
+
     // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email }, { phone }] 
+    const existingUser = await User.findOne({
+      $or: [{ email }, { phone }]
     });
 
     if (existingUser) {
@@ -69,6 +88,8 @@ const signup = async (req, res) => {
       }
     }
 
+    console.log('👤 Creating user in database...');
+
     // Create new user
     const user = await User.create({
       fullName,
@@ -78,14 +99,21 @@ const signup = async (req, res) => {
       password
     });
 
+    console.log('✅ User created with ID:', user._id);
+
     // Update last login
     user.lastLogin = new Date();
     await user.save();
 
+    console.log('🎫 Generating auth tokens...');
     createSendToken(user, 201, res);
   } catch (error) {
-    console.error('Signup error:', error);
-    
+    console.error('❌ Signup error:', {
+      message: error.message,
+      code: error.code,
+      name: error.name
+    });
+
     if (error.code === 11000) {
       const field = Object.keys(error.keyValue)[0];
       return res.status(400).json({
@@ -94,9 +122,19 @@ const signup = async (req, res) => {
       });
     }
 
+    // Handle database connection errors specifically
+    if (error.name === 'MongooseError' || error.message.includes('connect')) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database connection error. Please try again later.',
+        error: 'DATABASE_CONNECTION_ERROR'
+      });
+    }
+
     res.status(500).json({
       success: false,
-      message: 'Error creating account. Please try again.'
+      message: 'Error creating account. Please try again.',
+      error: error.message
     });
   }
 };
