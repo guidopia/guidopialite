@@ -11,18 +11,33 @@ const connectDB = async () => {
     }
 
     console.log('🔌 Connecting to MongoDB...');
-    
+    console.log('📍 MongoDB URI exists:', !!config.MONGODB_URI);
+    console.log('🌐 Node ENV:', process.env.NODE_ENV);
+
+    if (!config.MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable not set');
+    }
+
     await mongoose.connect(config.MONGODB_URI, {
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000, // Increased timeout
       socketTimeoutMS: 45000,
+      bufferCommands: false,
+      bufferMaxEntries: 0,
+      maxIdleTimeMS: 30000,
+      family: 4 // Force IPv4
     });
-    
+
     isConnected = true;
-    console.log('✅ MongoDB Connected');
-    
+    console.log('✅ MongoDB Connected to:', mongoose.connection.name);
+    console.log('🏠 Database host:', mongoose.connection.host);
+
   } catch (error) {
-    console.error('❌ Database connection error:', error);
+    console.error('❌ Database connection error:', {
+      message: error.message,
+      name: error.name,
+      code: error.code
+    });
     console.warn('⚠️  App will continue without database connection');
     // Don't exit process in serverless environment
     // Instead, let the app handle requests and return appropriate errors
