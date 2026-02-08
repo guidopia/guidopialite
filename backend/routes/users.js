@@ -3,10 +3,13 @@ const router = express.Router();
 const User = require('../models/User');
 const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
+const { awaitConnection } = require('../config/database');
 
 // GET /api/users/students - Get all students for admin dashboard
 router.get('/students', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
+    await awaitConnection();
+    
     const { page = 1, limit = 50, search = '', class: studentClass = '' } = req.query;
     
     // Build search query
@@ -75,6 +78,8 @@ router.get('/students', authenticateToken, authorizeRoles('admin'), async (req, 
 // GET /api/users/stats - Get student statistics for admin dashboard
 router.get('/stats', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
+    await awaitConnection();
+
     // Get total students count
     const totalStudents = await User.countDocuments({ role: 'user' });
     
@@ -123,6 +128,8 @@ router.get('/stats', authenticateToken, authorizeRoles('admin'), async (req, res
 // GET /api/users/classes - Get available classes for filter dropdown
 router.get('/classes', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
+    await awaitConnection();
+
     const classes = await User.distinct('class', { role: 'user' });
     
     res.status(200).json({
@@ -144,6 +151,8 @@ router.get('/classes', authenticateToken, authorizeRoles('admin'), async (req, r
 router.get('/report.pdf', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
     const { search = '', class: studentClass = '' } = req.query;
+
+    await awaitConnection();
 
     let searchQuery = { role: 'user' };
     if (search) {

@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
+const { awaitConnection } = require('../config/database');
 
 // Helper function to create and send JWT token
 const createSendToken = (user, statusCode, res) => {
@@ -49,34 +50,8 @@ const signup = async (req, res) => {
   try {
     const { fullName, class: userClass, phone, email, password } = req.body;
 
-    console.log('🔐 Signup attempt:', {
-      email,
-      fullName,
-      phone,
-      userClass,
-      hasPassword: !!password
-    });
-
     // Ensure database connection is established
-    const mongoose = require('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.log('⏳ Waiting for database connection during signup...');
-      // Wait up to 10 seconds for connection
-      let attempts = 0;
-      while (mongoose.connection.readyState !== 1 && attempts < 20) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        attempts++;
-      }
-
-      if (mongoose.connection.readyState !== 1) {
-        console.error('❌ Database connection failed during signup, readyState:', mongoose.connection.readyState);
-        return res.status(503).json({
-          success: false,
-          message: 'Database connection error. Please try again later.',
-          readyState: mongoose.connection.readyState
-        });
-      }
-    }
+    await awaitConnection();
 
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -163,6 +138,9 @@ const login = async (req, res) => {
         message: 'Please provide email and password'
       });
     }
+
+    // Ensure connection
+    await awaitConnection();
 
     // Check if user exists && password is correct
     const user = await User.findOne({ email }).select('+password');
@@ -260,6 +238,9 @@ const refreshToken = async (req, res) => {
       });
     }
 
+    // Ensure connection
+    await awaitConnection();
+
     // Verify refresh token
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
     
@@ -308,7 +289,7 @@ const refreshToken = async (req, res) => {
     console.error('Token refresh error:', error);
     
     if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
+      return res.status(411).json({
         success: false,
         message: 'Invalid refresh token'
       });
@@ -333,6 +314,7 @@ const refreshToken = async (req, res) => {
 // @access  Private
 const getMe = async (req, res) => {
   try {
+    await awaitConnection();
     const user = await User.findById(req.user.id);
     
     res.status(200).json({
@@ -357,6 +339,8 @@ const updateProfile = async (req, res) => {
   try {
     const { fullName, class: userClass, phone, email } = req.body;
     
+    await awaitConnection();
+
     // Check if email is being changed and if it already exists
     if (email && email !== req.user.email) {
       const existingUser = await User.findOne({ email });
@@ -425,6 +409,8 @@ const updateProfile = async (req, res) => {
 const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
+
+    await awaitConnection();
 
     // Get user with password
     const user = await User.findById(req.user.id).select('+password');

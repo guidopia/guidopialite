@@ -1,9 +1,13 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { awaitConnection } = require('../config/database');
 
 // Middleware to protect routes - verify JWT token
 const protect = async (req, res, next) => {
   try {
+    // Ensure database connection
+    await awaitConnection();
+
     let token;
 
     // Check for token in cookies first, then in Authorization header
@@ -65,6 +69,16 @@ const protect = async (req, res, next) => {
       });
     }
     
+    // Check for connection errors specifically
+    if (error.name === 'MongooseError' || error.message.includes('connect')) {
+       console.error('Auth middleware DB connection error:', error);
+       return res.status(503).json({
+         success: false,
+         message: 'Service unavailable. Please try again.',
+         error: 'DATABASE_CONNECTION_ERROR'
+       });
+    }
+
     console.error('Auth middleware error:', error);
     return res.status(500).json({
       success: false,
@@ -97,6 +111,19 @@ const restrictTo = (...roles) => {
 // Middleware to check if user is authenticated (optional)
 const optionalAuth = async (req, res, next) => {
   try {
+    // Try to ensure connection but don't fail hard if just checking optional auth
+    // actually, we should fail if we can't connect, or we can't check auth.
+    // But optional auth usually implies "if not auth, continue as guest".
+    // If DB is down, guest logic might still work if it doesn't need DB.
+    // However, safest to try connecting.
+    try {
+        await awaitConnection(); 
+    } catch(e) {
+        // If connection fails, treat as not authenticated
+        console.warn('Optional auth DB connect failed, proceeding as guest');
+        return next();
+    }
+
     let token;
 
     if (req.cookies.jwt) {
