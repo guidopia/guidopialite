@@ -48,6 +48,26 @@ router.post('/create-admin', async (req, res) => {
       });
     }
 
+    // Ensure database connection is established
+    const mongoose = require('mongoose');
+    if (mongoose.connection.readyState !== 1) {
+      console.log('⏳ Waiting for database connection...');
+      // Wait up to 10 seconds for connection
+      let attempts = 0;
+      while (mongoose.connection.readyState !== 1 && attempts < 20) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        attempts++;
+      }
+
+      if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({
+          success: false,
+          message: 'Database connection not available. Please try again later.',
+          readyState: mongoose.connection.readyState
+        });
+      }
+    }
+
     const adminData = {
       fullName: 'Guidopia Admin',
       email: 'admin@guidopia.com',

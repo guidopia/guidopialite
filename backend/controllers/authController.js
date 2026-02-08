@@ -57,15 +57,25 @@ const signup = async (req, res) => {
       hasPassword: !!password
     });
 
-    // Check database connection first
+    // Ensure database connection is established
     const mongoose = require('mongoose');
     if (mongoose.connection.readyState !== 1) {
-      console.error('❌ Database not connected during signup, readyState:', mongoose.connection.readyState);
-      return res.status(503).json({
-        success: false,
-        message: 'Database connection error. Please try again later.',
-        readyState: mongoose.connection.readyState
-      });
+      console.log('⏳ Waiting for database connection during signup...');
+      // Wait up to 10 seconds for connection
+      let attempts = 0;
+      while (mongoose.connection.readyState !== 1 && attempts < 20) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        attempts++;
+      }
+
+      if (mongoose.connection.readyState !== 1) {
+        console.error('❌ Database connection failed during signup, readyState:', mongoose.connection.readyState);
+        return res.status(503).json({
+          success: false,
+          message: 'Database connection error. Please try again later.',
+          readyState: mongoose.connection.readyState
+        });
+      }
     }
 
     // Check if user already exists

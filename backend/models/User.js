@@ -80,8 +80,7 @@ const userSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Index for better query performance (only define once)
-userSchema.index({ email: 1 });
+// Index for better query performance (email already indexed by unique: true)
 userSchema.index({ phone: 1 });
 userSchema.index({ createdAt: -1 });
 

@@ -17,21 +17,18 @@ const connectDB = async () => {
     if (!config.MONGODB_URI) {
       throw new Error('MONGODB_URI environment variable not set');
     }
-
+    
     await mongoose.connect(config.MONGODB_URI, {
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 10000, // Increased timeout
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
-      bufferCommands: false,
-      bufferMaxEntries: 0,
-      maxIdleTimeMS: 30000,
-      family: 4 // Force IPv4
+      bufferCommands: false
     });
-
+    
     isConnected = true;
     console.log('✅ MongoDB Connected to:', mongoose.connection.name);
     console.log('🏠 Database host:', mongoose.connection.host);
-
+    
   } catch (error) {
     console.error('❌ Database connection error:', {
       message: error.message,
