@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Users, Search, Filter, Download, Eye, Mail, Phone, GraduationCap, Calendar, TrendingUp, User, AlertCircle, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Search, Filter, Download, Eye, Mail, Phone, GraduationCap, Calendar, TrendingUp, User, AlertCircle, Loader2, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import apiService from '../services/api';
+import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
+  const { logout } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [students, setStudents] = useState([]);
@@ -162,7 +166,19 @@ const AdminDashboard = () => {
               >
                 <Download className="w-5 h-5 text-emerald-600" />
               </button>
-              <div className="w-10 h-10 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl flex items-center justify-center">
+              
+              <button 
+                onClick={() => {
+                  logout();
+                  toast.success('Logged out successfully');
+                }}
+                className="bg-red-50 backdrop-blur-md border border-red-100 rounded-xl p-3 hover:bg-red-100 transition-all duration-300 shadow-lg group"
+                title="Logout"
+              >
+                <LogOut className="w-5 h-5 text-red-500 group-hover:text-red-600" />
+              </button>
+
+              <div className="w-10 h-10 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200/50">
                 <User className="w-5 h-5 text-white" />
               </div>
             </div>

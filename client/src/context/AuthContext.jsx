@@ -53,7 +53,8 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setError('');
-      setLoading(true);
+      // We don't set global loading here to avoid unmounting the AuthPage
+      // The AuthPage handles its own loading state (isSubmitting)
       
       const response = await apiService.login(credentials);
       
@@ -95,15 +96,13 @@ export const AuthProvider = ({ children }) => {
         success: false,
         error: errorMessage
       };
-    } finally {
-      setLoading(false);
     }
   };
 
   const signup = async (userData) => {
     try {
       setError('');
-      setLoading(true);
+      // We don't set global loading here to avoid unmounting the AuthPage
       
       const response = await apiService.signup(userData);
       
@@ -139,8 +138,6 @@ export const AuthProvider = ({ children }) => {
         success: false,
         error: errorMessage
       };
-    } finally {
-      setLoading(false);
     }
   };
 

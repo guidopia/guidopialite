@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Phone, Mail, Lock, GraduationCap, Sparkles, Zap, Brain, Rocket, CheckCircle, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
 const AuthPage = () => {
@@ -19,6 +20,13 @@ const AuthPage = () => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const { signup, login, error, clearError, isAuthenticated, isAdmin: userIsAdmin } = useAuth();
 
@@ -147,35 +155,25 @@ const AuthPage = () => {
       }
 
       if (result && result.success) {
-        console.log('Auth success:', result.message);
-        console.log('Result data:', result.data);
-        console.log('Redirect URL:', result.data?.redirectUrl);
-        
-        // Navigate based on redirectUrl from backend
-        if (result.data && result.data.redirectUrl) {
-          console.log('Navigating to:', result.data.redirectUrl);
-          navigate(result.data.redirectUrl);
-        } else if (result.data && result.data.user) {
-          // Fallback navigation logic
-          console.log('Using fallback navigation, user role:', result.data.user.role);
-          if (result.data.user.role === 'admin') {
-            navigate('/admin');
-          } else {
-            navigate('/landing');
-          }
-        }
+        const user = result.data?.user || result.user;
+        toast.success(`Welcome ${user?.fullName || 'back'}!`);
+        // Navigation is handled by PublicRoute/useEffect watching isAuthenticated
         return;
       }
       
       // Handle authentication failure
       if (result && !result.success) {
-        setLocalError(result.error);
+        const msg = result.error || 'Authentication failed';
+        toast.error(msg);
+        setLocalError(msg); // Keep local error for persistent display if needed, but toast is primary
       }
     } catch (err) {
       console.error('Submission error:', err);
-      setLocalError('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.');
     } finally {
-      setIsSubmitting(false);
+      if (mounted.current) {
+        setIsSubmitting(false);
+      }
     }
   };
 
