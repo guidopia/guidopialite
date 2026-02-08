@@ -122,8 +122,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ========== KEY FIX #4: FAVICON HANDLER ==========
 app.get('/favicon.ico', (req, res) => res.status(204).end());
-app.get('/favicon.png', (req, res) => res.status(204).end());
-app.get('/favicon', (req, res) => res.status(204).end());
 
 // ========== DEBUGGING ENDPOINTS ==========
 app.get('/health', (req, res) => {
