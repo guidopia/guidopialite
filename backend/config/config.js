@@ -6,7 +6,7 @@ const config = {
   PORT: process.env.PORT || 5001,
   
   // Database configuration
-  MONGODB_URI: process.env.MONGODB_URI || 'mongodb+srv://guidopiacareer_db_user:Rimcsbmk0yZufeim@cluster0.jurshme.mongodb.net/GuidopiaXNps?retryWrites=true&w=majority',
+  MONGODB_URI: process.env.MONGODB_URI || 'mongodb+srv://guidopiacareer_db_user:Rimcsbmk0yZufeim@cluster0.jurshme.mongodb.net/test?retryWrites=true&w=majority',
   
   // JWT configuration
   JWT_SECRET: process.env.JWT_SECRET || 'guidopia-super-secret-jwt-key-2024-development',
